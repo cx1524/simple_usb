@@ -164,6 +164,17 @@ SETUP（主机发 8 字节请求）→ DATA（按需，可 IN 可 OUT）→ STAT
 4. CDC 数据为什么用 Bulk 而不是中断/控制？
 5. bmRequestType 怎么区分标准请求和类请求？
 
+### 1.6 阶段 1 阅读资料（先建立心智模型，再写代码）
+
+| 资料 | 重点阅读 | 目的 |
+| --- | --- | --- |
+| 《USB in a Nutshell》（Beyond Logic，免费在线） | 第 1–5 章：概念、枚举、描述符、设备类 | 图文并茂、最快建立整体概念，与本节五个"为什么"一一对应 |
+| USB 2.0 Specification（usb.org） | 第 4 章 架构总览 / 第 5 章 数据流模型 / 第 8 章 协议层 / 第 9 章 设备框架 | 规范原文，需要精确细节时逐条查证 |
+| 《USB Complete》（Jan Axelson，中文版《USB 大全》） | 第 1–6 章 协议基础 | 系统性通读，补全零散知识 |
+| USB Made Simple（usbmadesimple.co.uk） | 第 1–6 章 | 面向新手的图文教程（可选） |
+
+> 阅读顺序建议：先看《USB in a Nutshell》前 4 章建立整体概念 → 再回看本节各"为什么" → 需要精确字节布局时查 USB 2.0 Spec 第 9 章。
+
 ---
 
 ## 2. 为什么框架要这样搭
@@ -276,6 +287,17 @@ port/                               # 硬件适配层（后续补充，见 §2.4
   所以 DCD 在收到 RESET/SETUP/传输完成时，通过回调**主动通知**协议层。没有这个机制，枚举无法推进。
 - **为什么要有 mock/**：开发软件逻辑时往往还没有硬件。Mock DCD 在 PC 上"假扮"一台 USB 控制器：
   主动注入 SETUP（模拟主机提问）、接收协议层的回复并断言。这样软件逻辑在移植前就能被验证。
+
+### 2.6 阶段 2 阅读资料（理解分层架构）
+
+| 资料 | 重点阅读 | 目的 |
+| --- | --- | --- |
+| 本工程《[MCU-USB 启动流程说明](./MCU-USB启动流程说明.md)》 | 四层模型、枚举流程、时间窗、调试方法 | 架构主线，必读 |
+| TinyUSB（hathach/tinyusb，开源） | `src/device/usbd.c`（Core）、`src/class/cdc/`、`src/class/vendor/` | 开源栈的同类实现，对照理解 Core / 类驱动如何分层 |
+| CherryUSB（cherry-embedded，开源） | `core/usbd_core.c`、`class/cdc/` | 国内开源栈，注释友好，对照更轻松 |
+| STM32 USB Device Library（ST 官方） | `usbd_core.c`、`usbd_cdc.c`、`usbd_desc.c` | 业界最常见的参考实现 |
+
+> 阅读方法：边读边回答"四层模型里每一层，在这个开源栈中对应哪个文件、哪个函数？"——**读通一个开源栈胜过抄十份代码**。对照时只看与本框架同职责的部分，不要被厂商封装带偏。
 
 ---
 
@@ -453,6 +475,16 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 | 示波器/逻辑分析仪 | D+ 上拉、复位时序、时钟质量 | 硬件阶段（后续） |
 | 串口终端（PuTTY/Tera Term） | CDC 数据通路验证 | 硬件阶段（后续） |
 
+### 4.3 各里程碑配套阅读资料
+
+| 里程碑 | 必读 | 选读 |
+| --- | --- | --- |
+| **A**（M1–M4） | USB 2.0 Spec §9.1 设备状态与状态机；§9.4 描述符结构；§9.5/9.6 标准请求；《USB in a Nutshell》第 3 章"枚举" | USB 2.0 Spec §8.5 控制传输细节（三阶段、ZLP 规则）；TinyUSB `usbd_ctlreq.c` |
+| **B**（M5–M6） | USB 2.0 Spec §9.6 标准请求逐条（GET_DESCRIPTOR / SET_CONFIGURATION / GET_STATUS / SET_FEATURE / CLEAR_FEATURE…）；§9.6.7 字符串描述符（语言 ID → UTF-16LE） | CherryUSB `usbd_desc.c`、`usbd_req.c` 对照 |
+| **C**（M7–M10） | USB CDC Spec 1.2：§3 类代码与 ACM 子类、§5.2 类特定请求、§6.2 功能描述符 | CherryUSB / TinyUSB 的 CDC 类驱动源码；TinyUSB 配套测试用例 |
+
+> 阅读时机：进入该里程碑的第一步先读"必读"，对照计划文档对应 Step 的"为什么"再动手填代码。
+
 ---
 
 ## 5. 移植到一块真实 MCU 并跑通 CDC
@@ -509,6 +541,18 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 | wTotalLength 错 | Windows 拒绝枚举 | Mock 阶段就该断言；移植后抓包比对描述符树 |
 | 中断优先级不对 | FreeRTOS 下枚举失效 | 确认 USB 中断优先级能被及时响应（不低于临界区所需） |
 
+### 5.6 移植阶段阅读资料
+
+| 资料 | 重点阅读 | 目的 |
+| --- | --- | --- |
+| 目标 MCU 参考手册（USB 章节） | USB 控制器寄存器、端点/FIFO 规划、中断与 DMA | 寄存器级实现依据（DCD 全部接口都从这里翻译） |
+| 目标 MCU 官方 DDL/SDK（仓库内已有 G32F463_DAL_Driver，含 `g32f463_ddl_usb.c/.h`，可作示例） | 厂商 USB 驱动用法与例程 | 照抄初始化序列（时钟/PHY/GPIO），再对照 §2.4 契约实现 DCD |
+| 《USB in a Nutshell》第 4 章 | 传输类型、枚举时序图 | 排查"枚举断在某一步"的协议层/时序原因 |
+| ST AN4879（USB 硬件与 PCB 设计指南） | D+/D- 布线、上拉电阻、电源、时钟要求 | 排查"主机完全无反应"等硬件侧原因 |
+| FreeRTOS 文档（若使用 RTOS） | 中断优先级、调度器启动顺序 | 规避 §5.3 的 RTOS 时序坑 |
+
+> 移植期遇到问题先按 §5.5 的"坑"表对号入座，再翻对应资料；不要上来就逐寄存器排查。
+
 ---
 
 ## 6. 风险与注意事项
@@ -547,6 +591,26 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 
 ### 7.2 参考资料
 
-- USB 2.0 Spec Chapter 9（描述符 / 标准请求 / 状态机）
-- USB CDC Spec 1.2
+**规范与协议**
+- USB 2.0 Spec（usb.org）：第 4/5/8/9 章（架构总览、数据流模型、协议层、设备框架；第 9 章含描述符 / 标准请求 / 状态机）
+- USB CDC Spec 1.2（usb.org）：§3 ACM 子类、§5.2 类特定请求、§6.2 功能描述符
+
+**入门与书籍（阶段 1）**
+- 《USB in a Nutshell》（Beyond Logic，免费在线：beyondlogic.org/usbnutshell）
+- USB Made Simple（usbmadesimple.co.uk，免费在线）
+- 《USB Complete》（Jan Axelson，中文版《USB 大全》）
+
+**开源实现（阶段 2 / 里程碑对照）**
+- TinyUSB：https://github.com/hathach/tinyusb
+- CherryUSB：https://github.com/cherry-embedded/CherryUSB
+- STM32 USB Device Library（ST 官方）
+
+**硬件移植（阶段 5）**
+- 目标 MCU 参考手册（USB 章节）；仓库内 G32F463_DAL_Driver（`g32f463_ddl_usb.c/.h`）可作示例
+- ST AN4879：USB 硬件与 PCB 设计指南
+- FreeRTOS 官方文档（如使用 RTOS）
+
+**工程内部**
 - 《[MCU-USB 启动流程说明](./MCU-USB启动流程说明.md)》（架构主线：四层模型、枚举、时间窗、调试）
+
+> 各阶段具体阅读清单见：§1.6（阶段 1）、§2.6（阶段 2）、§4.3（里程碑 A/B/C）、§5.6（移植阶段）。
