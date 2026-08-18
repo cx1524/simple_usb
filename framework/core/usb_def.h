@@ -35,4 +35,25 @@
 
 /* TODO: 在此定义本文件内容（见上方职责清单） */
 
+/* Request type */
+#define GET_STATUS 0x00
+#define CLEAR_FEATURE 0x01
+#define SET_FEATURE 0x03
+#define SET_ADDRESS 0x05
+#define GET_DESCRIPTOR 0x06
+#define SET_CONFIGURATION 0x09
+#define GET_INTERFACE 0x0A
+#define SET_INTERFACE 0x0B
+#define SYNCH_FRAME 0x0C
+
+
+typedef struct SET_UP_PACKET_T{
+    uint8_t bmRequestType; // direction[7:7] | request_type[6:5] | recipient[4:0]
+    uint8_t bRequest;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+} SET_UP_PACKET_T;
+
+
 #endif /* __USB_DEF_H__ */
