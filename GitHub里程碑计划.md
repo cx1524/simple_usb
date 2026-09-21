@@ -22,7 +22,7 @@
 
 | # | 里程碑标题 | 覆盖模块 | 覆盖文件 | 完成标志（验收标准） | 依赖 | 建议 Tag |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | 最小枚举逻辑 | M1–M4 | `core/usb_def.h`、`core/usb_dcd.h`、`core/usbd_fsm.c`、`core/usbd_ep0.c` | Mock 下：GET_DESCRIPTOR(Device) 回 18 字节 + SET_ADDRESS 成功 + `wLength=8` 仅回 8 字节 + 非法请求 Stall | 无 | `v0.1.0` |
+| A | 最小枚举逻辑 | M1–M4 | `core/usb_def.h`、`core/usb_dcd.h`、`core/usbd_fsm.c`、`core/usbd_ep0.c`、`mock/mock_dcd.c` | Mock 下：GET_DESCRIPTOR(Device) 回 18 字节 + SET_ADDRESS 成功 + `wLength=8` 仅回 8 字节 + 非法请求 Stall | 无 | `v0.1.0` |
 | B | 完整枚举逻辑 | M5–M6 | `core/usbd_desc.c`、`core/usbd_req.c`、`core/usbd_event.c` | Mock 下：配置拼接自检通过（`wTotalLength`==实际长度）+ 字符串正确 + SET_CONFIGURATION(0)/(非0) 往返正确 + 事件分发覆盖所有订阅者 | A | `v0.2.0` |
 | C | 类驱动与传输 | M7–M10 | `class/usbd_class.c`、`class/cdc/usbd_cdc.c`、`core/usb_transfer.c`、`mock/mock_dcd.c` + 测试 | Mock 下：CDC 枚举 + 类请求 + Bulk + ZLP 全绿；`ctest` 通过；框架无任何 MCU 依赖 | B | `v0.3.0` |
 | D | 移植 MCU 跑通 CDC | §5 移植清单 | `port/`（板级初始化 + 真实 DCD） | 烧录后 Windows 出现 COM 口；PuTTY 双向收发；拔插 10 次稳定 | C | `v1.0.0` |
@@ -39,25 +39,29 @@
 
 **描述**：搭出协议栈"心脏"——协议词汇表、与硬件的契约接口、设备状态机、EP0 控制传输引擎。此阶段只追求"最小枚举"跑通，不涉及描述符拼接和类驱动。
 
-#### Issue A1 填充 `core/usb_def.h`（M1 协议词汇表）
+**测试先行说明**：本里程碑采用"测试先行"节奏。A3 的 Mock 是测试平台，**先于** A4/A5 的实现搭建；A4/A5 遵循"先写失败用例（红）→ 再填充实现（绿）"。A1/A2 是纯头文件，用编译期断言 / 契约实现锁定即可，不做完整 TDD。
+
+#### Issue A1 填充 `core/usb_def.h`（M1 协议词汇表）+ 编译期断言
 - **描述**：定义描述符类型常量、SETUP 包结构、bmRequestType 位域、标准请求码、描述符结构体、端点地址宏、速度/传输类型/错误码枚举。参考计划文档 §3 Step 1。
-- **验收**：编译通过；`sizeof(usb_setup_packet_t) == 8`；字段与 USB 2.0 规范 §9.6 一致。
+- **测试**：随头文件提交 `_Static_assert`（或 CTest 用例）：`sizeof(usb_setup_packet_t) == 8`、字段偏移与 USB 2.0 规范 §9.6 一致。纯常量定义不需要完整 TDD，编译期断言即为回归保障。
+- **验收**：编译通过；上述编译期断言全部通过。
 
 #### Issue A2 填充 `core/usb_dcd.h`（M2 与硬件的契约）
 - **描述**：三组接口——控制类（init/connect/disconnect/set_address/remote_wakeup）、端点类（ep_open/close/stall/clear_stall/write/read）、事件上报（事件枚举 + 回调注册）。`ep_write` 必须是非阻塞语义。参考计划文档 §3 Step 2。
+- **测试（契约先行）**：接口即契约，A3 的 Mock 实现就是契约的"活测试"。`ep_write` 非阻塞语义（立即返回、完成靠事件上报）在写实现前先用 Mock 的调用记录断言锁死，避免 Milestone D 移植真实 DCD 时语义漂移。
 - **验收**：头文件无任何芯片头文件依赖；提供 stub（或由 mock 先实现桩）使全工程可链接。
 
-#### Issue A3 填充 `core/usbd_fsm.c`（M3 设备状态机）
-- **描述**：状态枚举（ATTACHED/POWERED/DEFAULT/ADDRESS/CONFIGURED）、集中切换函数 `usbd_set_state()`（含非法跳转校验）、进入/退出钩子、RESET 处理。参考计划文档 §3 Step 3。
-- **验收**：单测遍历合法迁移；构造 DEFAULT→CONFIGURED 非法跳转被拒绝。
+#### Issue A3 最小 Mock 测试平台（测试先行）
+- **描述**：实现 `mock/mock_dcd.c` 的最小可用版：可注入 RESET、SETUP，记录协议层对 DCD 的调用（`ep_write`/`set_address` 入参与次数），配套最小 CMake 工程。作为 A4/A5 的测试平台先搭建，不追求完整行为，只求"能注入事件、能断言协议层响应"。
+- **验收**：能编译并运行一个冒烟用例（注入 RESET，断言协议层正确响应）；可作为 A4/A5 失败用例的载体。
 
-#### Issue A4 填充 `core/usbd_ep0.c`（M4 EP0 控制传输引擎）
-- **描述**：三阶段状态机（SETUP→DATA→STATUS）、SETUP 解析分发、DATA-IN 分包 + ZLP、DATA-OUT 接收、Stall 策略、SET_ADDRESS 延迟写。参考计划文档 §3 Step 4。
-- **验收**（配合 A5 的 Mock）：GET_DESCRIPTOR(Device) 恰好 18 字节；`wLength=8` 只回 8 字节；非法请求 Stall 且后续请求正常。
+#### Issue A4 [M3] 状态机用例先行 → 填充 `core/usbd_fsm.c`
+- **描述**：先在 A3 平台上写状态机测试用例（红）：合法迁移全遍历、非法跳转（如 DEFAULT→CONFIGURED）必须被拒绝、RESET 回到 DEFAULT、进入/退出钩子调用次数。再实现状态枚举、集中切换函数 `usbd_set_state()`（含非法跳转校验）、进入/退出钩子、RESET 处理，直至用例全绿。参考计划文档 §3 Step 3。
+- **验收**：用例从红转绿；非法跳转用例存在且通过。
 
-#### Issue A5 最小 Mock + 验证用例
-- **描述**：实现 `mock/mock_dcd.c` 的最小可用版（可注入 RESET、SETUP，记录协议层行为），配套最小 CMake 工程；跑通 A4 的验收用例。
-- **验收**：A1–A4 的验收用例全部通过，Milestone A 关闭；打 tag `v0.1.0`。
+#### Issue A5 [M4] EP0 验收用例先行 → 填充 `core/usbd_ep0.c`
+- **描述**：先用 A3 平台写 EP0 验收用例（红）：GET_DESCRIPTOR(Device) 恰好 18 字节；`wLength=8` 只回 8 字节；非法请求 Stall 且后续请求正常；SET_ADDRESS 延迟写（两个 SETUP 之间写）；Stall 后能恢复。再实现三阶段状态机（SETUP→DATA→STATUS）、SETUP 解析分发、DATA-IN 分包 + ZLP、DATA-OUT 接收、Stall 策略，直至用例全绿。参考计划文档 §3 Step 4。
+- **验收**：上述 5 条用例从红转绿；A1–A5 验收用例全部通过，Milestone A 关闭；打 tag `v0.1.0`。
 
 ---
 
@@ -157,7 +161,7 @@
 
 - 一个 M 步骤 = 一个 Issue，标题格式：`[M1] 填充 usb_def.h（协议词汇表）`。
 - Issue 描述中写清：**做什么**（引用计划文档章节）、**为什么**（一句话）、**验收标准**。
-- 里程碑内按依赖顺序排序，A4 的验收依赖 A5 的 Mock，可在 Issue 中互相 @ 引用。
+- 里程碑内按依赖顺序排序，A4/A5 的用例依赖 A3 的 Mock 平台，可在 Issue 中互相 @ 引用。
 
 ### 3.3 提交 / 分支策略
 
@@ -171,11 +175,11 @@
 
 | Issue | 标题 | Milestone | Label |
 | --- | --- | --- | --- |
-| A1 | [M1] 填充 usb_def.h（协议词汇表） | A | feature / core |
-| A2 | [M2] 填充 usb_dcd.h（硬件契约接口） | A | feature / core |
-| A3 | [M3] 填充 usbd_fsm.c（设备状态机） | A | feature / core |
-| A4 | [M4] 填充 usbd_ep0.c（EP0 控制传输引擎） | A | feature / core |
-| A5 | 最小 Mock + 枚举验证用例 | A | test / mock |
+| A1 | [M1] 填充 usb_def.h（协议词汇表）+ 编译期断言 | A | feature / core |
+| A2 | [M2] 填充 usb_dcd.h（硬件契约接口，契约先行） | A | feature / core |
+| A3 | 最小 Mock 测试平台（测试先行） | A | test / mock |
+| A4 | [M3] 状态机：用例先行 → 填充 usbd_fsm.c | A | feature / core |
+| A5 | [M4] EP0：验收用例先行 → 填充 usbd_ep0.c | A | feature / core |
 | B1 | [M5] 填充 usbd_desc.c + usbd_req.c | B | feature / core |
 | B2 | [M6] 填充 usbd_event.c（事件总线） | B | feature / core |
 | B3 | 枚举回归用例（SET_CONFIGURATION 往返等） | B | test / mock |

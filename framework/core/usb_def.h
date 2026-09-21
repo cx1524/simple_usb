@@ -20,9 +20,9 @@
  *      传输类型（CTRL / ISO / BULK / INT）、错误码。
  *
  * 【需要实现（TODO）】
- *   [ ] 描述符类型常量定义
- *   [ ] usb_setup_packet_t 与 bmRequestType 位域宏
- *   [ ] 标准请求码定义
+ *   [x] 描述符类型常量定义
+ *   [x] usb_setup_packet_t 与 bmRequestType 位域宏
+ *   [x] 标准请求码定义
  *   [ ] 各类描述符结构体
  *   [ ] 端点地址宏 / 速度 / 传输类型 / 错误码枚举
  *
@@ -34,26 +34,121 @@
 #define __USB_DEF_H__
 
 /* TODO: 在此定义本文件内容（见上方职责清单） */
+#include <stdint.h>
 
-/* Request type */
-#define GET_STATUS 0x00
-#define CLEAR_FEATURE 0x01
-#define SET_FEATURE 0x03
-#define SET_ADDRESS 0x05
-#define GET_DESCRIPTOR 0x06
-#define SET_CONFIGURATION 0x09
-#define GET_INTERFACE 0x0A
-#define SET_INTERFACE 0x0B
-#define SYNCH_FRAME 0x0C
+#if defined(_MSC_VER)
+    #define USB_PACKED
+    #pragma pack(push, 1)
+#else
+    #define USB_PACKED __attribute__((packed))
+#endif
 
+/* @brief 描述符类型常量定义 */
+#define USB_DESC_DEVICE 1
+#define USB_DESC_CONFIGURATION 2
+#define USB_DESC_STRING 3
+#define USB_DESC_INTERFACE 4
+#define USB_DESC_ENDPOINT 5
+#define USB_DESC_DEVICE_QUALIFIER 6
+#define USB_DESC_OTHER_SPEED_CONFIGUATION 7
+#define USB_DESC_INTERFACE_POWER 8
 
-typedef struct SET_UP_PACKET_T{
-    uint8_t bmRequestType; // direction[7:7] | request_type[6:5] | recipient[4:0]
+/* @brief bmRequestType 位域宏定义 */
+#define USB_REQUEST_TYPE_DIRECTION_OUT       0x00
+#define USB_REQUEST_TYPE_DIRECTION_IN        0x80
+#define USB_REQUEST_TYPE_TYPE_STANDARD       0x00
+#define USB_REQUEST_TYPE_TYPE_CLASS          0x20
+#define USB_REQUEST_TYPE_TYPE_VENDOR         0x40
+#define USB_REQUEST_TYPE_RECIPIENT_DEVICE    0x00
+#define USB_REQUEST_TYPE_RECIPIENT_INTERFACE 0x01
+#define USB_REQUEST_TYPE_RECIPIENT_ENDPOINT  0x02
+#define USB_REQUEST_TYPE_RECIPIENT_OTHER     0x03
+
+/* @brief 标准请求码定义 */
+#define USB_REQUEST_GET_STATUS 0x00
+#define USB_REQUEST_CLEAR_FEATURE 0x01
+#define USB_REQUEST_SET_FEATURE 0x03
+#define USB_REQUEST_SET_ADDRESS 0x05
+#define USB_REQUEST_GET_DESCRIPTOR 0x06
+#define USB_REQUEST_SET_DESCRIPTOR 0x07
+#define USB_REQUEST_GET_CONFIGURATION 0x08
+#define USB_REQUEST_SET_CONFIGURATION 0x09
+#define USB_REQUEST_GET_INTERFACE 0x0A
+#define USB_REQUEST_SET_INTERFACE 0x0B
+#define USB_REQUEST_SYNCH_FRAME 0x0C
+
+/* @brief SETUP 包结构体定义 */
+USB_PACKED typedef struct usb_setup_packet_t {
+    uint8_t bmRequestType;
     uint8_t bRequest;
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;
-} SET_UP_PACKET_T;
+} usb_setup_packet_t;
 
+/* @brief 各类描述符结构体定义 */
 
+/* 标准设备描述符 */
+USB_PACKED typedef struct usb_desc_standard_device_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint16_t idVendor;
+    uint16_t idProduct;
+    uint16_t bcdDevice;
+    uint8_t iManufacturer;
+    uint8_t iProduct;
+    uint8_t iSerialNumber;
+    uint8_t bNumConfigurations;
+} usb_desc_standard_device_t;
+
+USB_PACKED typedef struct usb_desc_device_qualifier_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint8_t bNumConfigurations;
+    uint8_t bReserved;
+} usb_desc_device_qualifier_t;
+
+USB_PACKED typedef struct usb_desc_standard_configuration_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t wTotalLength;
+    uint8_t bNumInterfaces;
+    uint8_t bConfigurationValue;
+    uint8_t iConfiguration;
+    uint8_t bmAttributes;
+    uint8_t bMaxPower;
+} usb_desc_standard_configuration_t;
+
+USB_PACKED typedef struct usb_desc_other_speed_configuration_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t wTotalLength;
+    uint8_t bNumInterfaces;
+    uint8_t bConfigurationValue;
+    uint8_t iConfiguration;
+    uint8_t bmAttributes;
+    uint8_t bMaxPower;
+} usb_desc_other_speed_configuration_t;
+
+USB_PACKED typedef struct usb_desc_standard_interface_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint8_t bInterfaceNumber;
+    uint8_t bAlternateSetting;
+    uint8_t bNumEndpoints;
+    uint8_t bInterfaceClass;
+    uint8_t bInterfaceSubClass;
+    uint8_t bInterfaceProtocol;
+    uint8_t iInterface;
+} usb_desc_standard_interface_t;
 #endif /* __USB_DEF_H__ */
