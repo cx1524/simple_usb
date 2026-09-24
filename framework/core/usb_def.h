@@ -24,7 +24,7 @@
  *   [x] usb_setup_packet_t 与 bmRequestType 位域宏
  *   [x] 标准请求码定义
  *   [x] 各类描述符结构体
- *   [ ] 端点地址宏 / 速度 / 传输类型 / 错误码枚举
+ *   [x] 端点地址宏 / 速度 / 传输类型 / 错误码枚举
  *
  * 【约束】仅依赖 <stdint.h> 等标准头，禁止包含任何 MCU 头文件。
  * 【参考】《MCU-USB 启动流程说明》§6.3.2 / §6.7；USB 2.0 Spec §9.6。
@@ -79,7 +79,7 @@
 #define USB_ERROR_INVALID_ENDPOINT_NUM 0x0F
 #define USB_ERROR_INVALID_ENDPOINT_DIR 0x10
 #define USB_ERROR_INVALID_ENDPOINT_NUM 0x11
-#define USB_ERROR_INVALID_ENDPOINT_DIR 0x12  
+#define USB_ERROR_INVALID_ENDPOINT_DIR 0x12
 
 /* @brief 描述符类型常量定义 */
 #define USB_DESC_DEVICE 1

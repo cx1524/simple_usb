@@ -47,9 +47,9 @@
 - **验收**：编译通过；上述编译期断言全部通过。
 
 #### Issue A2 填充 `core/usb_dcd.h`（M2 与硬件的契约）
-- **描述**：三组接口——控制类（init/connect/disconnect/set_address/remote_wakeup）、端点类（ep_open/close/stall/clear_stall/write/read）、事件上报（事件枚举 + 回调注册）。`ep_write` 必须是非阻塞语义。参考计划文档 §3 Step 2。
+- **描述**：三组接口——控制类（init 带 speed 参数/connect/disconnect/set_address/remote_wakeup）、端点类（ep_open/close/stall/clear_stall/write/read）、事件上报（事件类型枚举 + 事件载荷结构体 + 回调注册 `usb_dcd_set_event_cb`）。`ep_write` 必须是非阻塞语义。`init` 的 speed 参数决定 EP0 MPS（LS=8/FS=64）。事件载荷：SETUP 携带 `usb_setup_packet_t`，传输完成携带端点地址 + 实际字节数。参考计划文档 §3 Step 2。
 - **测试（契约先行）**：接口即契约，A3 的 Mock 实现就是契约的"活测试"。`ep_write` 非阻塞语义（立即返回、完成靠事件上报）在写实现前先用 Mock 的调用记录断言锁死，避免 Milestone D 移植真实 DCD 时语义漂移。
-- **验收**：头文件无任何芯片头文件依赖；提供 stub（或由 mock 先实现桩）使全工程可链接。
+- **验收**：头文件无任何芯片头文件依赖；`init` 带 speed 参数；事件载荷结构体 + 回调注册接口完整；提供 stub（或由 mock 先实现桩）使全工程可链接。
 
 #### Issue A3 最小 Mock 测试平台（测试先行）
 - **描述**：实现 `mock/mock_dcd.c` 的最小可用版：可注入 RESET、SETUP，记录协议层对 DCD 的调用（`ep_write`/`set_address` 入参与次数），配套最小 CMake 工程。作为 A4/A5 的测试平台先搭建，不追求完整行为，只求"能注入事件、能断言协议层响应"。

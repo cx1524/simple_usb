@@ -274,7 +274,7 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 | 契约项 | 说明 |
 | --- | --- |
 | 平台初始化回调 | 适配层提供 `usb_platform_init(speed)`：时钟、PHY、GPIO、控制器复位、中断使能 |
-| DCD 实现 | 适配层实现 `usb_dcd.h` 全部接口（ep_open/close/stall/write/read、set_address、connect/disconnect） |
+| DCD 实现 | 适配层实现 `usb_dcd.h` 全部接口（init、ep_open/close/stall/write/read、set_address、connect/disconnect、set_event_cb） |
 | 事件上报 | 适配层在其中断服务程序中调用协议层注册的事件回调，保证"读状态→清标志→回调"三件事内无阻塞 |
 | 内存对齐要求 | 适配层如需 DMA/缓存一致性，向协议层声明缓冲区对齐要求 |
 | 速度能力声明 | 适配层声明支持的速度（FS/HS），协议层按速度选择描述符集 |
@@ -319,8 +319,9 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 
 ### Step 2 填充 `framework/core/usb_dcd.h`（M2 与硬件的契约）
 
-- **做什么**：三组接口——控制类（init/connect/disconnect/set_address/remote_wakeup）、
-  端点类（ep_open/close/stall/clear_stall/write/read）、事件上报（事件枚举 + 回调注册）。
+- **做什么**：三组接口——控制类（init 带 speed 参数/connect/disconnect/set_address/remote_wakeup）、
+  端点类（ep_open/close/stall/clear_stall/write/read）、事件上报（事件类型枚举 + 事件载荷结构体 + 回调注册）。
+  事件载荷：SETUP 携带 `usb_setup_packet_t`，传输完成携带端点地址 + 实际字节数。
 - **为什么是这 11 个接口**：这是协议层需要向硬件问的**全部问题的最小集合**：
   开机关、设地址、收发包、停/恢复端点、报告总线事件。多一个就多一个移植负担，少一个协议层就办不成事。
 - **为什么 `ep_write` 必须是非阻塞提交**：USB 传输由主机令牌驱动、异步完成，控制器 FIFO 也可能满。
