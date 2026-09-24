@@ -23,7 +23,7 @@
  *   [x] 描述符类型常量定义
  *   [x] usb_setup_packet_t 与 bmRequestType 位域宏
  *   [x] 标准请求码定义
- *   [ ] 各类描述符结构体
+ *   [x] 各类描述符结构体
  *   [ ] 端点地址宏 / 速度 / 传输类型 / 错误码枚举
  *
  * 【约束】仅依赖 <stdint.h> 等标准头，禁止包含任何 MCU 头文件。
@@ -42,6 +42,44 @@
 #else
     #define USB_PACKED __attribute__((packed))
 #endif
+
+/* @brief 端点地址宏定义 */
+#define USB_EP_NUM(addr)      ((addr) & 0xF)
+#define USB_EP_DIR_IN         (0x80)
+#define USB_EP_DIR_OUT        (0x00)
+#define USB_EP_ADDR(num, dir) ((num) | (dir))
+
+// 速度枚举
+#define USB_SPEED_LS          (0x00)
+#define USB_SPEED_FS          (0x01)
+#define USB_SPEED_HS          (0x02)
+
+// 传输类型枚举
+#define USB_TRANSFER_TYPE_CTRL    (0x00)
+#define USB_TRANSFER_TYPE_ISO     (0x01)
+#define USB_TRANSFER_TYPE_BULK    (0x02)
+#define USB_TRANSFER_TYPE_INT     (0x03)
+
+//错误码枚举
+#define USB_ERROR_NONE 0x00
+#define USB_ERROR_INVALID_PARAM 0x01
+#define USB_ERROR_NOT_SUPPORTED 0x02
+#define USB_ERROR_TIMEOUT 0x03
+#define USB_ERROR_NOT_FOUND 0x04
+#define USB_ERROR_INVALID_STATE 0x05
+#define USB_ERROR_INVALID_LENGTH 0x06
+#define USB_ERROR_INVALID_DATA 0x07
+#define USB_ERROR_INVALID_ADDRESS 0x08
+#define USB_ERROR_INVALID_ENDPOINT 0x09
+#define USB_ERROR_INVALID_TRANSFER_TYPE 0x0A
+#define USB_ERROR_INVALID_SPEED 0x0B
+#define USB_ERROR_INVALID_ENDPOINT_DIR 0x0C
+#define USB_ERROR_INVALID_ENDPOINT_NUM 0x0D
+#define USB_ERROR_INVALID_ENDPOINT_DIR 0x0E
+#define USB_ERROR_INVALID_ENDPOINT_NUM 0x0F
+#define USB_ERROR_INVALID_ENDPOINT_DIR 0x10
+#define USB_ERROR_INVALID_ENDPOINT_NUM 0x11
+#define USB_ERROR_INVALID_ENDPOINT_DIR 0x12  
 
 /* @brief 描述符类型常量定义 */
 #define USB_DESC_DEVICE 1
@@ -89,7 +127,7 @@ USB_PACKED typedef struct usb_setup_packet_t {
 /* @brief 各类描述符结构体定义 */
 
 /* 标准设备描述符 */
-USB_PACKED typedef struct usb_desc_standard_device_t {
+USB_PACKED typedef struct usb_desc_device_t {
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint16_t bcdUSB;
@@ -104,7 +142,7 @@ USB_PACKED typedef struct usb_desc_standard_device_t {
     uint8_t iProduct;
     uint8_t iSerialNumber;
     uint8_t bNumConfigurations;
-} usb_desc_standard_device_t;
+} usb_desc_device_t;
 
 USB_PACKED typedef struct usb_desc_device_qualifier_t {
     uint8_t bLength;
@@ -118,7 +156,7 @@ USB_PACKED typedef struct usb_desc_device_qualifier_t {
     uint8_t bReserved;
 } usb_desc_device_qualifier_t;
 
-USB_PACKED typedef struct usb_desc_standard_configuration_t {
+USB_PACKED typedef struct usb_desc_configuration_t {
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint16_t wTotalLength;
@@ -127,7 +165,7 @@ USB_PACKED typedef struct usb_desc_standard_configuration_t {
     uint8_t iConfiguration;
     uint8_t bmAttributes;
     uint8_t bMaxPower;
-} usb_desc_standard_configuration_t;
+} usb_desc_configuration_t;
 
 USB_PACKED typedef struct usb_desc_other_speed_configuration_t {
     uint8_t bLength;
@@ -140,7 +178,7 @@ USB_PACKED typedef struct usb_desc_other_speed_configuration_t {
     uint8_t bMaxPower;
 } usb_desc_other_speed_configuration_t;
 
-USB_PACKED typedef struct usb_desc_standard_interface_t {
+USB_PACKED typedef struct usb_desc_interface_t {
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint8_t bInterfaceNumber;
@@ -150,5 +188,15 @@ USB_PACKED typedef struct usb_desc_standard_interface_t {
     uint8_t bInterfaceSubClass;
     uint8_t bInterfaceProtocol;
     uint8_t iInterface;
-} usb_desc_standard_interface_t;
+} usb_desc_interface_t;
+
+USB_PACKED typedef struct usb_desc_endpoint_t {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint8_t bEndpointAddress;
+    uint8_t bmAttributes;
+    uint16_t wMaxPacketSize;
+    uint8_t bInterval;
+} usb_desc_endpoint_t;
+
 #endif /* __USB_DEF_H__ */
