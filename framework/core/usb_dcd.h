@@ -11,7 +11,7 @@
  *   2. 端点类接口：usb_dcd_ep_open(ep_addr, type, mps, bInterval) /
  *      usb_dcd_ep_close() / usb_dcd_ep_stall() / usb_dcd_ep_clear_stall() /
  *      usb_dcd_ep_write() / usb_dcd_ep_read()。
- *   3. 事件上报：usb_dcd_event_t 事件类型 + 回调注册 usb_dcd_set_event_cb()，
+ *   3. 事件上报：usb_dcd_event_t 事件类型 + 回调注册 usb_dcd_set_event_callback()，
  *      事件包括 RESET / SUSPEND / RESUME / SOF / SETUP_RECV /
  *      EP_IN_XFER_COMPLETE / EP_OUT_XFER_COMPLETE。
  *   4. 桩实现（usb_dcd_stub）：所有接口返回"未实现"，保证无硬件时可链接。

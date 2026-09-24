@@ -274,7 +274,7 @@ port/                               # 硬件适配层（后续补充，见 §2.4
 | 契约项 | 说明 |
 | --- | --- |
 | 平台初始化回调 | 适配层提供 `usb_platform_init(speed)`：时钟、PHY、GPIO、控制器复位、中断使能 |
-| DCD 实现 | 适配层实现 `usb_dcd.h` 全部接口（init、ep_open/close/stall/write/read、set_address、connect/disconnect、set_event_cb） |
+| DCD 实现 | 适配层实现 `usb_dcd.h` 全部接口（init、ep_open/close/stall/write/read、set_address、connect/disconnect、set_event_callback） |
 | 事件上报 | 适配层在其中断服务程序中调用协议层注册的事件回调，保证"读状态→清标志→回调"三件事内无阻塞 |
 | 内存对齐要求 | 适配层如需 DMA/缓存一致性，向协议层声明缓冲区对齐要求 |
 | 速度能力声明 | 适配层声明支持的速度（FS/HS），协议层按速度选择描述符集 |
